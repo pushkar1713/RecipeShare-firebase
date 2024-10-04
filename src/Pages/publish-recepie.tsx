@@ -41,17 +41,16 @@ const initialValue: Post = {
   userId: null,
 };
 
-const [post, setPost] = useState<Post>(initialValue);
-const [fileEntry, setFileEntry] = useState<FileEntry>({
-  files: [],
-});
-
-const handleSumbit = async (e: any) => {
-  console.log("uploaded file entry : ", fileEntry);
-  console.log("post is : ", post);
-};
-
 export default function PublishRecipePage() {
+  const [post, setPost] = useState<Post>(initialValue);
+  const [fileEntry, setFileEntry] = useState<FileEntry>({
+    files: [],
+  });
+
+  const handleSumbit = async (e: any) => {
+    console.log("uploaded file entry : ", fileEntry);
+    console.log("post is : ", post);
+  };
   console.log(post);
 
   const categories = [
