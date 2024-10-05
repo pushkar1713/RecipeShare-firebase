@@ -11,47 +11,56 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { ChefHat, Github, Plus, Minus } from "lucide-react";
-import FileUploader from "@/components/fileUploader";
-import { OutputFileEntry } from "@uploadcare/react-uploader";
+import { useUserAuth } from "@/context/userAuthContext";
+
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "../firebaseConfig";
 
 interface Post {
   title: string;
   category: string;
-  photo: PhotoMeta[];
   ingredient: string[];
   instructions: string[];
   userId: string | null;
 }
 
-interface PhotoMeta {
-  cdnUrl: string;
-  uuid: string;
-}
-
-interface FileEntry {
-  files: OutputFileEntry[];
-}
-
 const initialValue: Post = {
   title: "",
   category: "",
-  photo: [],
+  // photo: [],
   ingredient: [""],
   instructions: [""],
   userId: null,
 };
 
 export default function PublishRecipePage() {
-  const [post, setPost] = useState<Post>(initialValue);
-  const [fileEntry, setFileEntry] = useState<FileEntry>({
-    files: [],
-  });
+  const { user } = useUserAuth();
 
-  const handleSumbit = async (e: any) => {
-    console.log("uploaded file entry : ", fileEntry);
-    console.log("post is : ", post);
-  };
+  const [post, setPost] = useState<Post>(initialValue);
   console.log(post);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (user != null) {
+      const newPost: Post = {
+        ...post,
+        userId: user.uid || null,
+      };
+      console.log("The final post is : ", newPost);
+
+      try {
+        const docRef = await addDoc(collection(db, "posts"), newPost);
+        console.log("Document written with ID: ", docRef.id);
+        // You can add success handling here (e.g., showing a success message, redirecting)
+      } catch (e) {
+        console.error("Error adding document: ", e);
+        // You can add error handling here (e.g., showing an error message)
+      }
+    } else {
+      console.log("User is not authenticated");
+      // You can add handling for unauthenticated users here
+    }
+  };
 
   const categories = [
     { value: "italian", label: "Italian" },
@@ -133,7 +142,7 @@ export default function PublishRecipePage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
           Publish a New Recipe
         </h1>
-        <form className="space-y-6">
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
             <Label htmlFor="title">Recipe Title</Label>
             <Input
@@ -164,7 +173,7 @@ export default function PublishRecipePage() {
             </Select>
           </div>
           <div>
-            <FileUploader fileEntry={fileEntry} onChange={setFileEntry} />
+            {/* <FileUploader fileEntry={fileEntry} onChange={setFileEntry} /> */}
           </div>
           <div>
             <Label>Ingredients</Label>

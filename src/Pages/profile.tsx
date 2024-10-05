@@ -1,25 +1,106 @@
 import { Button } from "@/components/ui/button";
+import { useUserAuth } from "@/context/userAuthContext";
 import { ChefHat, Github, BookOpen, Bookmark } from "lucide-react";
+import { useUserProfile } from "../lib/useUserProfile";
+import { db } from "../firebaseConfig";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
 
-// Mock data for user and recipes
-const user = {
-  username: "cookingmaster",
-  email: "cookingmaster@example.com",
-};
-
-const publishedRecipes = [
-  { id: 1, title: "Homemade Pizza", category: "Italian" },
-  { id: 2, title: "Chocolate Chip Cookies", category: "Dessert" },
-  { id: 3, title: "Vegetable Soup", category: "Soup" },
-];
-
-const savedRecipes = [
-  { id: 4, title: "Beef Stroganoff", category: "Russian" },
-  { id: 5, title: "Sushi Rolls", category: "Japanese" },
-  { id: 6, title: "Greek Salad", category: "Greek" },
-];
+interface Recipe {
+  id: string;
+  title: string;
+  category: string;
+}
 
 export default function ProfilePage() {
+  const { profile } = useUserProfile();
+  const { user } = useUserAuth();
+
+  const [publishedRecipes, setPublishedRecipes] = useState<Recipe[]>([]);
+  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
+  const [loadingPublished, setLoadingPublished] = useState<boolean>(true);
+  const [loadingSaved, setLoadingSaved] = useState<boolean>(true);
+
+  const userInfo = {
+    username: profile?.displayName,
+    email: profile?.email,
+  };
+
+  useEffect(() => {
+    const fetchPublishedRecipes = async () => {
+      if (user?.uid) {
+        try {
+          setLoadingPublished(true);
+          const postsRef = collection(db, "posts");
+          const q = query(postsRef, where("userId", "==", user.uid));
+          const querySnapshot = await getDocs(q);
+          const recipes = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Recipe[];
+          setPublishedRecipes(recipes);
+        } catch (e) {
+          console.error("Error fetching published recipes: ", e);
+        } finally {
+          setLoadingPublished(false);
+        }
+      }
+    };
+    const fetchSavedRecipes = async () => {
+      if (user?.uid) {
+        try {
+          setLoadingSaved(true);
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const savedRecipeIds = userData.savedRecipes || [];
+
+            if (Array.isArray(savedRecipeIds) && savedRecipeIds.length > 0) {
+              const recipePromises = savedRecipeIds.map((recipeId: string) =>
+                getDoc(doc(db, "posts", recipeId))
+              );
+
+              const recipeDocs = await Promise.all(recipePromises);
+              const recipes = recipeDocs
+                .filter((doc) => doc.exists())
+                .map((doc) => {
+                  const data = doc.data();
+                  return {
+                    id: doc.id,
+                    title: data.title,
+                    category: data.category,
+                  } as Recipe;
+                });
+
+              console.log("Fetched Saved Recipes:", recipes);
+              setSavedRecipes(recipes);
+            } else {
+              console.log(
+                "No saved recipes found or savedRecipes is not an array."
+              );
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching saved recipes:", error);
+        } finally {
+          setLoadingSaved(false);
+        }
+      }
+    };
+
+    fetchPublishedRecipes();
+    fetchSavedRecipes();
+  }, [user?.uid]);
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -67,7 +148,7 @@ export default function ProfilePage() {
               <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Username</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {user.username}
+                  {userInfo.username}
                 </dd>
               </div>
               <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -75,7 +156,7 @@ export default function ProfilePage() {
                   Email address
                 </dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {user.email}
+                  {userInfo.email}
                 </dd>
               </div>
             </dl>
@@ -86,70 +167,86 @@ export default function ProfilePage() {
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
             Published Recipes
           </h3>
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
-              {publishedRecipes.map((recipe) => (
-                <li key={recipe.id}>
-                  <a
-                    href={`/recipe/${recipe.id}`}
-                    className="block hover:bg-gray-50"
-                  >
-                    <div className="px-4 py-4 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-orange-600 truncate">
-                          {recipe.title}
-                        </p>
-                        <div className="ml-2 flex-shrink-0 flex">
-                          <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            {recipe.category}
-                          </p>
+          {loadingPublished ? (
+            <p>Loading...</p>
+          ) : (
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+              <ul className="divide-y divide-gray-200">
+                {publishedRecipes.length === 0 ? (
+                  <p className="p-4">No published recipes yet.</p>
+                ) : (
+                  publishedRecipes.map((recipe) => (
+                    <li key={recipe.id}>
+                      <a
+                        href={`/recipe/${recipe.id}`}
+                        className="block hover:bg-gray-50"
+                      >
+                        <div className="px-4 py-4 sm:px-6">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-orange-600 truncate">
+                              {recipe.title}
+                            </p>
+                            <div className="ml-2 flex-shrink-0 flex">
+                              <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                {recipe.category}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex items-center text-sm text-gray-500">
+                            <BookOpen className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                            <p>Published</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500">
-                        <BookOpen className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
-                        <p>Published</p>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+                      </a>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="mt-8">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
             Saved Recipes
           </h3>
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
-              {savedRecipes.map((recipe) => (
-                <li key={recipe.id}>
-                  <a
-                    href={`/recipe/${recipe.id}`}
-                    className="block hover:bg-gray-50"
-                  >
-                    <div className="px-4 py-4 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-orange-600 truncate">
-                          {recipe.title}
-                        </p>
-                        <div className="ml-2 flex-shrink-0 flex">
-                          <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {recipe.category}
-                          </p>
+          {loadingSaved ? (
+            <p>Loading...</p>
+          ) : (
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+              <ul className="divide-y divide-gray-200">
+                {savedRecipes.length === 0 ? (
+                  <p className="p-4">No saved recipes yet.</p>
+                ) : (
+                  savedRecipes.map((recipe) => (
+                    <li key={recipe.id}>
+                      <a
+                        href={`/recipe/${recipe.id}`}
+                        className="block hover:bg-gray-50"
+                      >
+                        <div className="px-4 py-4 sm:px-6">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-orange-600 truncate">
+                              {recipe.title}
+                            </p>
+                            <div className="ml-2 flex-shrink-0 flex">
+                              <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {recipe.category}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex items-center text-sm text-gray-500">
+                            <Bookmark className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                            <p>Saved</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500">
-                        <Bookmark className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
-                        <p>Saved</p>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+                      </a>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       </main>
       <footer className="bg-white">

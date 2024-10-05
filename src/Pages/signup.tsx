@@ -4,27 +4,50 @@ import { Label } from "@/components/ui/label";
 import { ChefHat, Github } from "lucide-react";
 import { useState } from "react";
 import { useUserAuth } from "../context/userAuthContext";
+import { db } from "../firebaseConfig"; // Make sure to import your Firebase config
+import { doc, setDoc } from "firebase/firestore";
 
 type userInfo = {
   email: string;
   password: string;
+  username: string;
 };
 
 const initialValue: userInfo = {
   email: "",
   password: "",
+  username: "",
 };
 
 export default function SignUpPage() {
   const { signUp } = useUserAuth();
   const [userInfo, setUserInfo] = useState<userInfo>(initialValue);
-  const handleSumbit = async (e: any) => {
+  const createUserProfile = async (userId: string) => {
+    const userProfile = {
+      userId,
+      email: userInfo.email,
+      displayName: userInfo.username,
+      savedRecipes: [],
+    };
+
+    try {
+      await setDoc(doc(db, "users", userId), userProfile);
+      console.log("User profile created successfully");
+    } catch (error) {
+      console.error("Error creating user profile:", error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signUp(userInfo.email, userInfo.password);
-      console.log("user info is : ", userInfo);
+      const userCredential = await signUp(userInfo.email, userInfo.password);
+      if (userCredential && userCredential.user) {
+        await createUserProfile(userCredential.user.uid);
+      }
+      console.log("User signed up successfully");
     } catch (error) {
-      console.log(error);
+      console.error("Error signing up:", error);
     }
   };
   return (
@@ -71,6 +94,10 @@ export default function SignUpPage() {
                   required
                   className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
                   placeholder="Username"
+                  value={userInfo.username}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setUserInfo({ ...userInfo, username: e.target.value });
+                  }}
                 />
               </div>
               <div>
@@ -114,7 +141,7 @@ export default function SignUpPage() {
             <div>
               <Button
                 type="submit"
-                onClick={handleSumbit}
+                onClick={handleSubmit}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
               >
                 Sign up
