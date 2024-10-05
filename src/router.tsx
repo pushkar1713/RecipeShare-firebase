@@ -24,7 +24,7 @@ export const appRouter = createBrowserRouter([
     element: <RecipesPage />,
   },
   {
-    path: "/recipes",
+    path: "/recipe/:recipeId",
     element: <RecipeDetailPage />,
   },
   {

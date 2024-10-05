@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { ChefHat, Github } from "lucide-react";
 import { useUserAuth } from "../context/userAuthContext";
 import { useState } from "react";
+import { Footer } from "@/components/footer";
+import { Link, useNavigate } from "react-router-dom";
 
 type userInfo = {
   email: string;
@@ -16,6 +18,7 @@ const initialValue: userInfo = {
 };
 
 export default function SignInPage() {
+  const navigate = useNavigate();
   const { logIn } = useUserAuth();
   const [userInfo, setUserInfo] = useState<userInfo>(initialValue);
   const handleSumbit = async (e: any) => {
@@ -23,6 +26,7 @@ export default function SignInPage() {
     try {
       await logIn(userInfo.email, userInfo.password);
       console.log(" signed in, user info is : ", userInfo);
+      navigate("/home");
     } catch (error) {
       console.log(error);
     }
@@ -110,33 +114,17 @@ export default function SignInPage() {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
-              <a
-                href="/signup"
+              <Link
+                to={"/signup"}
                 className="font-medium text-orange-600 hover:text-orange-500"
               >
                 Sign up
-              </a>
+              </Link>
             </p>
           </div>
         </div>
       </main>
-      <footer className="bg-white">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm text-gray-500">
-              © 2024 RecipeShare. All rights reserved.
-            </p>
-            <nav className="flex gap-4 mt-4 sm:mt-0">
-              <a className="text-sm text-gray-500 hover:text-gray-900" href="#">
-                Terms of Service
-              </a>
-              <a className="text-sm text-gray-500 hover:text-gray-900" href="#">
-                Privacy
-              </a>
-            </nav>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

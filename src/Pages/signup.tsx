@@ -6,6 +6,8 @@ import { useState } from "react";
 import { useUserAuth } from "../context/userAuthContext";
 import { db } from "../firebaseConfig"; // Make sure to import your Firebase config
 import { doc, setDoc } from "firebase/firestore";
+import { Footer } from "@/components/footer";
+import { Link, useNavigate } from "react-router-dom";
 
 type userInfo = {
   email: string;
@@ -20,6 +22,7 @@ const initialValue: userInfo = {
 };
 
 export default function SignUpPage() {
+  const navigate = useNavigate();
   const { signUp } = useUserAuth();
   const [userInfo, setUserInfo] = useState<userInfo>(initialValue);
   const createUserProfile = async (userId: string) => {
@@ -46,6 +49,7 @@ export default function SignUpPage() {
         await createUserProfile(userCredential.user.uid);
       }
       console.log("User signed up successfully");
+      navigate("/home");
     } catch (error) {
       console.error("Error signing up:", error);
     }
@@ -151,33 +155,17 @@ export default function SignUpPage() {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <a
-                href="/signin"
+              <Link
+                to={"/signin"}
                 className="font-medium text-orange-600 hover:text-orange-500"
               >
                 Sign in
-              </a>
+              </Link>
             </p>
           </div>
         </div>
       </main>
-      <footer className="bg-white">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm text-gray-500">
-              © 2024 RecipeShare. All rights reserved.
-            </p>
-            <nav className="flex gap-4 mt-4 sm:mt-0">
-              <a className="text-sm text-gray-500 hover:text-gray-900" href="#">
-                Terms of Service
-              </a>
-              <a className="text-sm text-gray-500 hover:text-gray-900" href="#">
-                Privacy
-              </a>
-            </nav>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -1,5 +1,7 @@
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Github, ChefHat, Users, Share2, Search } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function LandingPage() {
   return (
@@ -13,12 +15,14 @@ export default function LandingPage() {
             </span>
           </a>
           <nav className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              Login
-            </Button>
+            <Link to={"/signin"}>
+              <Button
+                variant="ghost"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                Login
+              </Button>
+            </Link>
             <a
               href="https://github.com"
               target="_blank"
@@ -92,34 +96,20 @@ export default function LandingPage() {
                 food enthusiasts.
               </p>
               <div className="mt-8">
-                <Button
-                  size="lg"
-                  className="bg-orange-500 text-white hover:bg-orange-600"
-                >
-                  Get Started
-                </Button>
+                <Link to={"/signup"}>
+                  <Button
+                    size="lg"
+                    className="bg-orange-500 text-white hover:bg-orange-600"
+                  >
+                    Get Started
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
         </section>
       </main>
-      <footer className="bg-white">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm text-gray-500">
-              © 2024 RecipeShare. All rights reserved.
-            </p>
-            <nav className="flex gap-4 mt-4 sm:mt-0">
-              <a className="text-sm text-gray-500 hover:text-gray-900" href="#">
-                Terms of Service
-              </a>
-              <a className="text-sm text-gray-500 hover:text-gray-900" href="#">
-                Privacy
-              </a>
-            </nav>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

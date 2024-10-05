@@ -1,71 +1,100 @@
 import { Button } from "@/components/ui/button";
-import { ChefHat, Github, Clock, Users, BookmarkPlus } from "lucide-react";
+import { Clock, Users, BookmarkPlus } from "lucide-react";
+import { db } from "../firebaseConfig"; // Adjust this import based on your project structure
+import { arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom"; // Make sure to install react-router-dom
+import { useUserAuth } from "@/context/userAuthContext";
+import { Footer } from "@/components/footer";
+import { FirstHeader } from "@/components/firstHeader";
 
-// Mock data for the recipe
-const recipe = {
-  id: 1,
-  title: "Spaghetti Carbonara",
-  category: "Italian",
-  author: "Chef Mario",
-  cookTime: "30 minutes",
-  servings: 4,
-  image: "/placeholder.svg?height=400&width=600",
-  ingredients: [
-    "400g spaghetti",
-    "200g pancetta or guanciale, diced",
-    "4 large eggs",
-    "100g Pecorino Romano cheese, grated",
-    "100g Parmigiano-Reggiano cheese, grated",
-    "Freshly ground black pepper",
-    "Salt",
-  ],
-  instructions: [
-    "Bring a large pot of salted water to boil and cook spaghetti according to package instructions until al dente.",
-    "While the pasta is cooking, fry the pancetta in a large skillet over medium heat until crispy, about 5-7 minutes.",
-    "In a bowl, whisk together eggs, grated cheeses, and a generous amount of black pepper.",
-    "When the pasta is done, reserve 1 cup of pasta water, then drain the pasta and add it to the skillet with the pancetta.",
-    "Remove the skillet from heat and quickly stir in the egg and cheese mixture, tossing rapidly to coat the pasta without scrambling the eggs.",
-    "Add some reserved pasta water if needed to achieve a creamy consistency.",
-    "Serve immediately with additional grated cheese and black pepper on top.",
-  ],
-};
+interface Recipe {
+  id: string;
+  title: string;
+  category: string;
+  author: string;
+  cookTime: string;
+  servings: number;
+  image: string;
+  ingredients: string[];
+  instructions: string[];
+}
 
 export default function RecipeDetailPage() {
+  const navigate = useNavigate();
+  const { user } = useUserAuth();
+  const { recipeId } = useParams<{ recipeId: string }>(); // Get recipe ID from URL
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const saveRecipe = async (userId: string, recipeId: string) => {
+    const userRef = doc(db, "users", userId);
+    try {
+      await updateDoc(userRef, {
+        savedRecipes: arrayUnion(recipeId),
+      });
+      navigate("/profile");
+      console.log("Recipe saved successfully");
+    } catch (error) {
+      console.error("Error saving recipe:", error);
+    }
+  };
+
+  useEffect(() => {
+    const fetchRecipe = async () => {
+      if (!recipeId) {
+        console.error("Recipe ID is undefined.");
+        setLoading(false);
+        return; // Exit if id is not defined
+      }
+
+      try {
+        const recipeDoc = await getDoc(doc(db, "posts", recipeId));
+        if (recipeDoc.exists()) {
+          const data = recipeDoc.data();
+          const text = data.title.toUpperCase();
+          const userDoc = await getDoc(doc(db, "users", data.userId));
+          let authorName = "";
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            authorName = userData.displayName;
+          }
+          setRecipe({
+            id: recipeDoc.id,
+            title: text,
+            category: data.category,
+            author: authorName, // Ensure this field exists in your data
+            cookTime: "60 mins",
+            servings: 2,
+            image:
+              "https://conagen.com/wp-content/uploads/2019/08/Food-Ingredients.jpg?height=400&width=600",
+            ingredients: data.ingredient,
+            instructions: data.instructions,
+          } as Recipe);
+        } else {
+          console.log("No such recipe!");
+        }
+      } catch (error) {
+        console.error("Error fetching recipe:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecipe();
+  }, [recipeId]);
+
+  if (loading) {
+    return <div>Loading...</div>; // Loading state
+  }
+
+  if (!recipe) {
+    return <div>Recipe not found!</div>; // Handle case when recipe is not found
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <a className="flex items-center justify-center" href="/">
-            <ChefHat className="h-8 w-8 text-orange-500" />
-            <span className="ml-2 text-xl font-semibold text-gray-800">
-              RecipeShare
-            </span>
-          </a>
-          <nav className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              Home
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              My Recipes
-            </Button>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <Github className="h-6 w-6" />
-              <span className="sr-only">GitHub</span>
-            </a>
-          </nav>
-        </div>
-      </header>
+      <FirstHeader />
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white shadow-lg rounded-lg overflow-hidden">
           <img
@@ -81,7 +110,19 @@ export default function RecipeDetailPage() {
                 </h1>
                 <p className="text-sm text-gray-600 mb-4">By {recipe.author}</p>
               </div>
-              <Button variant="outline" className="flex items-center">
+              <Button
+                variant="outline"
+                className="flex items-center"
+                onClick={() => {
+                  if (user?.uid) {
+                    saveRecipe(user.uid, recipe.id);
+                  } else {
+                    console.error(
+                      "User ID is undefined. Unable to save recipe."
+                    );
+                  }
+                }}
+              >
                 <BookmarkPlus className="h-5 w-5 mr-2" />
                 Save Recipe
               </Button>
@@ -122,23 +163,7 @@ export default function RecipeDetailPage() {
           </div>
         </div>
       </main>
-      <footer className="bg-white">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm text-gray-500">
-              © 2024 RecipeShare. All rights reserved.
-            </p>
-            <nav className="flex gap-4 mt-4 sm:mt-0">
-              <a className="text-sm text-gray-500 hover:text-gray-900" href="#">
-                Terms of Service
-              </a>
-              <a className="text-sm text-gray-500 hover:text-gray-900" href="#">
-                Privacy
-              </a>
-            </nav>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -10,11 +10,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ChefHat, Github, Plus, Minus } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { useUserAuth } from "@/context/userAuthContext";
 
 import { addDoc, collection } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { Footer } from "@/components/footer";
+import { useNavigate } from "react-router-dom";
+import { FirstHeader } from "@/components/firstHeader";
 
 interface Post {
   title: string;
@@ -34,6 +37,7 @@ const initialValue: Post = {
 };
 
 export default function PublishRecipePage() {
+  const navigate = useNavigate();
   const { user } = useUserAuth();
 
   const [post, setPost] = useState<Post>(initialValue);
@@ -51,7 +55,7 @@ export default function PublishRecipePage() {
       try {
         const docRef = await addDoc(collection(db, "posts"), newPost);
         console.log("Document written with ID: ", docRef.id);
-        // You can add success handling here (e.g., showing a success message, redirecting)
+        navigate("/home");
       } catch (e) {
         console.error("Error adding document: ", e);
         // You can add error handling here (e.g., showing an error message)
@@ -105,39 +109,7 @@ export default function PublishRecipePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <a className="flex items-center justify-center" href="/">
-            <ChefHat className="h-8 w-8 text-orange-500" />
-            <span className="ml-2 text-xl font-semibold text-gray-800">
-              RecipeShare
-            </span>
-          </a>
-          <nav className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              Home
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              My Recipes
-            </Button>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <Github className="h-6 w-6" />
-              <span className="sr-only">GitHub</span>
-            </a>
-          </nav>
-        </div>
-      </header>
+      <FirstHeader />
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
           Publish a New Recipe
@@ -240,7 +212,7 @@ export default function PublishRecipePage() {
           </Button>
         </form>
       </main>
-      {/* Footer code remains unchanged */}
+      <Footer />
     </div>
   );
 }
