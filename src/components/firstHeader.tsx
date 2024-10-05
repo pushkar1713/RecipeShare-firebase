@@ -40,7 +40,7 @@ export const FirstHeader = () => {
             LogOut
           </Button>
           <a
-            href="https://github.com"
+            href="https://github.com/pushkar1713/RecipeShare-firebase"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-600 hover:text-gray-900"

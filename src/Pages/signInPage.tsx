@@ -43,7 +43,7 @@ export default function SignInPage() {
           </a>
           <nav className="flex items-center gap-4">
             <a
-              href="https://github.com"
+              href="https://github.com/pushkar1713/RecipeShare-firebase"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-600 hover:text-gray-900"
